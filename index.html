@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kevin's game</title>
+    <link href="https://unpkg.com/tailwindcss@1.9.6/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        #canvas1 {
+            background-color: black;
+            top: 0%;
+            left: 0%;
+            width: 100%;
+            height: 100%;
+            margin-top: 0%;
+            margin-left: 0%;
+        }
+        
+        h1 {
+            font-size: 50px;
+        }
+        
+        #endScreen {
+            visibility: visible;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="fixed inset-0 flex items-center justify-center select-none text-center" id="endScreen">
+        <div class="bg-white max-w-md w-full p-5">
+            <h1 id="points">0</h1>
+            <b>
+            <h2 class="text-sm text-gray-700">Points</h2>
+            <br>
+            <div>
+                <button  class="bg-blue-500 text-white w-full py-2 rounded-full text-xl" id="startGamebtn"><b>Restart</b></button>
+        </div>
+        </b>
+    </div>
+    </div>
+    <canvas id="canvas1"></canvas>
+    <script>
+        let canvas = document.getElementById("canvas1");
+        let ctx = canvas.getContext("2d");
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        let endGame = document.getElementById("endScreen");
+        let points = document.getElementById("points");
+        let bullets = [];
+        let theInterval = undefined;
+        let startGamebtn = document.getElementById("startGamebtn");
+        let velx = undefined;
+        let vely = undefined;
+        let angle = undefined;
+        let ranNum = undefined;
+        let enemies = [];
+        let enemy = {
+            radii: undefined,
+            x: undefined,
+            y: undefined,
+        };
+        let random = undefined;
+        let enemyVel = {
+            x: undefined,
+            y: undefined,
+        };
+        let Myrgb = {
+            r: undefined,
+            g: undefined,
+            b: undefined,
+        };
+        let distanceToPlayer = undefined;
+        let distanceToBullet = undefined;
+        let lose = false;
+        let restart = false;
+        let RandomBoom = undefined;
+        let TheNuke = [];
+        let score = 0;
+        let animation = undefined;
+        let canStart = true;
+        canvas.addEventListener("click", (event) => {
+            angle = Math.atan2((event.clientY - canvas.height / 2), (event.clientX - canvas.width / 2));
+            velx = Math.cos(angle) * 10;
+            vely = Math.sin(angle) * 10;
+            bullets.push(new Bullet);
+
+        });
+        startGamebtn.addEventListener("click", () => {
+            if (canStart) {
+                animate();
+                spawnEnemy();
+                endGame.style.visibility = "hidden";
+                canStart = false;
+            }
+        })
+        time = 0;
+        class Player {
+            constructor() {
+                this.x = canvas.width / 2;
+                this.y = canvas.height / 2;
+                this.radii = 20;
+                this.color = "RGB(255,255,255)";
+            };
+            draw() {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radii, 0, 360);
+                ctx.fill();
+                ctx.closePath();
+            }
+        };
+        let player = new Player;
+        class SmallParticles {
+            constructor(x, y, radii, color) {
+                this.x = x;
+                this.y = y;
+                this.radii = radii * 2;
+                this.color = color;
+                this.velx = 1.5 - Math.random() * 3;
+                this.vely = 1.5 - Math.random() * 3;
+            }
+            update() {
+                this.x += this.velx;
+                this.y += this.vely;
+                if (this.radii > 0.3) {
+                    this.radii -= 0.15;
+                }
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radii, 0, 360);
+                ctx.fill();
+                ctx.closePath();
+            }
+
+        }
+
+        class Bullet {
+            constructor() {
+                this.x = player.x;
+                this.y = player.y;
+                this.radii = player.radii / 2;
+                this.color = player.color;
+                this.velx = velx;
+                this.vely = vely;
+            }
+            update() {
+                this.x += this.velx;
+                this.y += this.vely;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radii, 0, 360);
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+
+
+        class Enemy {
+            constructor(x, y, radii, color, velx, vely, size) {
+                this.x = x;
+                this.y = y;
+                this.radii = radii;
+                this.color = color;
+                this.size = size;
+                this.velx = velx * (10 - this.size);
+                this.vely = vely * (10 - this.size);
+            }
+            update() {
+                this.radii = this.size * 10;
+                this.x += this.velx;
+                this.y += this.vely;
+            }
+            draw() {
+                ctx.beginPath();
+                ctx.fillStyle = this.color;
+                ctx.arc(this.x, this.y, this.radii, 0, 360);
+                ctx.fill();
+                ctx.closePath();
+            }
+        }
+
+        function spawnEnemy() {
+            theInterval = setInterval(() => {
+                enemy.radii = Math.round(Math.random() * 3) * 10 + 10;
+                random = Math.round(Math.random() * 3);
+                Myrgb = {
+                    r: Math.round(Math.random() * 255),
+                    g: Math.round(Math.random() * 255),
+                    b: Math.round(Math.random() * 255),
+                }
+                switch (random) {
+                    case 0:
+                        enemy.x = 0 - (enemy.radii / 2);
+                        enemy.y = Math.round(Math.random() * canvas.height);
+                        break;
+                    case 1:
+                        enemy.x = canvas.width + (enemy.radii / 2);
+                        enemy.y = Math.round(Math.random() * canvas.height);
+                        break;
+                    case 2:
+                        enemy.x = Math.round(Math.random() * canvas.width);
+                        enemy.y = 0 - (enemy.radii / 2);
+                        break;
+                    case 3:
+                        enemy.x = Math.round(Math.random() * canvas.width);
+                        enemy.y = canvas.height + (enemy.radii / 2);
+                        break;
+                }
+                enemyVel = {
+                    x: Math.cos(Math.atan2(-enemy.y + (canvas.height / 2), -enemy.x + (canvas.width / 2))),
+                    y: Math.sin(Math.atan2(-enemy.y + (canvas.height / 2), -enemy.x + (canvas.width / 2))),
+                };
+                enemies.push(new Enemy(enemy.x, enemy.y, enemy.radii, "RGB(" + Myrgb.r + "," + Myrgb.g + "," + Myrgb.b + ")", enemyVel.x, enemyVel.y, enemy.radii / 10));
+            }, 1000);
+        };
+
+
+        function animate() {
+            animation = requestAnimationFrame(animate);
+            console.log(canStart);
+            ctx.beginPath();
+            ctx.font = "30px Arial";
+            ctx.fillStyle = "white";
+            ctx.fillText("Score: " + score.toString(), 20, 50);
+            ctx.closePath();
+            if (time == 0) {
+                enemies = [];
+                time++;
+            }
+            ctx.fillStyle = "RGBA(0,0,0,0.2)";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            for (var x = 0; x < bullets.length; x++) {
+                bullets[x].update();
+                bullets[x].draw();
+                if (bullets[x].x <= -10 || bullets[x].x >= canvas.width + 10 || bullets[x].y <= -10 || bullets[x].y >= canvas.height + 10) {
+                    bullets.splice(x, 1);
+                    x--;
+                }
+            }
+            for (var y = 0; y < enemies.length; y++) {
+                enemies[y].update();
+                distanceToPlayer = Math.sqrt(((enemies[y].x - (canvas.width / 2)) * (enemies[y].x - (canvas.width / 2))) + ((enemies[y].y - (canvas.height / 2)) * (enemies[y].y - (canvas.height / 2))));
+                enemies[y].draw();
+                for (var x = 0; x < bullets.length; x++) {
+                    //Code here
+                    distanceToBullet = Math.sqrt(((enemies[y].x - (bullets[x].x)) * (enemies[y].x - (bullets[x].x))) + ((enemies[y].y - (bullets[x].y)) * (enemies[y].y - (bullets[x].y))));
+                    if (distanceToBullet <= (bullets[x].radii + enemies[y].radii)) {
+                        RandomBoom = Math.round(Math.random() * 10 + 10);
+                        score += 10;
+                        for (var i = 0; i < RandomBoom; i++) {
+                            TheNuke.push(new SmallParticles(enemies[y].x, enemies[y].y, Math.round(Math.random() * 2), enemies[y].color));
+                        }
+                        enemies[y].size -= 1;
+                        bullets.splice(x, 1);
+                        x--;
+                    };
+                }
+                for (var lmaooo = 0; lmaooo < TheNuke.length; lmaooo++) {
+                    TheNuke[lmaooo].update();
+                    TheNuke[lmaooo].draw();
+                    if (TheNuke[lmaooo].radii <= 0.3) {
+                        TheNuke.splice(lmaooo, 1);
+                        lmaooo--;
+                    }
+                }
+                if (distanceToPlayer <= (player.radii + enemies[y].radii)) {
+                    bullets = [];
+                    canStart = true;
+                    velx = undefined;
+                    vely = undefined;
+                    angle = undefined;
+                    ranNum = undefined;
+                    enemies = [];
+                    enemy = {
+                        radii: undefined,
+                        x: undefined,
+                        y: undefined,
+                    };
+                    random = undefined;
+                    enemyVel = {
+                        x: undefined,
+                        y: undefined,
+                    };
+                    Myrgb = {
+                        r: undefined,
+                        g: undefined,
+                        b: undefined,
+                    };
+                    distanceToPlayer = undefined;
+                    distanceToBullet = undefined;
+                    RandomBoom = undefined;
+                    TheNuke = [];
+                    restart = true;
+                    ctx.beginPath();
+                    ctx.font = "30px Arial";
+                    ctx.fillStyle = "white";
+                    ctx.fillText("Score: " + score.toString(), 20, 50);
+                    ctx.closePath();
+                    clearInterval(theInterval);
+                    points.innerHTML = score;
+                    endGame.style.visibility = "visible";
+                    score = 0;
+                    time = 0;
+                    cancelAnimationFrame(animation);
+                };
+                if (enemies[y].size == 0 && !restart) {
+                    score += 10;
+                    enemies.splice(y, 1);
+                    y--;
+                }
+                restart = false;
+            };
+            player.draw();
+        }
+    </script>
+</body>
+
+</html>
